@@ -22,7 +22,8 @@ def main():
 
     window.setCentralWidget(tabs)
 
-    window.show()
+    # Opens maximized; resize() above is the size used when restoring.
+    window.showMaximized()
     sys.exit(app.exec())
 
 
