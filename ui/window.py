@@ -2,6 +2,8 @@ import sys
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget
 
+from ui.nc_tab import NcTab
+
 
 def main():
     app = QApplication(sys.argv)
@@ -13,11 +15,12 @@ def main():
     tabs = QTabWidget()
 
     checklist_tab = QWidget()
-    email_tab = QWidget()
+    nc_tab = NcTab()
 
-    # Add both widgets to `tabs`, with the labels "Checklist" and "Email".
+    tabs.addTab(checklist_tab, "Quality Checklist")
+    tabs.addTab(nc_tab, "Share Non-conformity")
 
-    # Make `tabs` the main window's central widget.
+    window.setCentralWidget(tabs)
 
     window.show()
     sys.exit(app.exec())
