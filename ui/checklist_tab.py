@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QDateEdit,
     QDateTimeEdit,
     QHBoxLayout,
+    QLabel,
     QMessageBox,
     QPushButton,
     QStyledItemDelegate,
@@ -118,6 +119,9 @@ class ChecklistTab(QWidget):
         self.model = ChecklistModel(self)
         self.table = QTableView()
         self.table.setModel(self.model)
+        self.model.dataChanged.connect(self._update_adhrence)
+        self.model.rowsInserted.connect(self._update_adhrence)
+        self.model.rowsRemoved.connect(self._update_adhrence)
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows
@@ -182,12 +186,16 @@ class ChecklistTab(QWidget):
         layout.addLayout(button_layout)
         layout.addWidget(self.table)
 
+        self.adherence_label = QLabel("Aderência:0.0%")
+        self.adherence_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(self.adherence_label)
         self._add_item()
 
     def _set_initial_column_widths(self):
         widths = (60, 280, 150, 220, 220, 160, 190, 240, 210, 220, 170)
         for column, width in enumerate(widths):
             self.table.setColumnWidth(column, width)
+
 
     def _add_item(self):
         row = self.model.add_empty_item()
@@ -217,3 +225,7 @@ class ChecklistTab(QWidget):
         )
         if answer == QMessageBox.StandardButton.Yes:
             self.model.remove_items(rows)
+
+    def _update_adhrence(self, *args):
+        adherence = self.model.calculate_adherence()
+        self.adherence_label.setText(f"Aderência: {adherence:1f}%")

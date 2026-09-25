@@ -138,3 +138,15 @@ class ChecklistModel(QAbstractTableModel):
         self.layoutAboutToBeChanged.emit()
         self._items.sort(key=sort_value, reverse=reverse)
         self.layoutChanged.emit()
+
+    def calculate_adherence(self):
+        total_items = len(self._items)
+
+        not_applicable = sum(1 for item in self._items if item["resultado"] == "NA")
+        conforming_items = sum(1 for item in self._items if item["resultado"] == "N")
+        applicable_items = total_items - not_applicable
+
+        if applicable_items == 0:
+            return 0.0
+
+        return (conforming_items/applicable_items)*100
