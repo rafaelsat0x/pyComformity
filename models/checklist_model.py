@@ -8,7 +8,7 @@ class ChecklistModel(QAbstractTableModel):
     COLUMNS = (
         ("id", "ID"),
         ("descricao", "Descrição"),
-        ("resultado", "Resultado (N/NC/NA)"),
+        ("resultado", "Resultado (C/NC/NA)"),
         (
             "identificacao_nc",
             "Data e Hora de identificação da NC",
@@ -143,7 +143,7 @@ class ChecklistModel(QAbstractTableModel):
         total_items = len(self._items)
 
         not_applicable = sum(1 for item in self._items if item["resultado"] == "NA")
-        conforming_items = sum(1 for item in self._items if item["resultado"] == "N")
+        conforming_items = sum(1 for item in self._items if item["resultado"] == "C")
         applicable_items = total_items - not_applicable
 
         if applicable_items == 0:

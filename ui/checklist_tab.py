@@ -144,7 +144,7 @@ class ChecklistTab(QWidget):
 
         self.table.setItemDelegateForColumn(
             2,
-            ChoiceDelegate(["", "N", "NC", "NA"], self.table),
+            ChoiceDelegate(["", "C", "NC", "NA"], self.table),
         )
         self.table.setItemDelegateForColumn(
             5,
