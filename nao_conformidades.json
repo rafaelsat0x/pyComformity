@@ -1,0 +1,88 @@
+{
+  "versao": 1,
+  "nao_conformidades": [
+    {
+      "id": 1,
+      "projeto": "test",
+      "descricao": "test",
+      "classificacao": "Média-Simples",
+      "acao_corretiva": "test",
+      "responsavel": "Luiz Dias",
+      "email_responsavel": "diassluizeduardo@gmail.com",
+      "responsavel_qa": "test",
+      "data_solicitacao": "2027-09-01",
+      "prazo": "2027-09-06",
+      "status": "Resolvida",
+      "observacoes": "",
+      "conclusao_em": "2026-09-25T18:27",
+      "forma_resolucao": "Produto/processo ajustado ao padrão",
+      "solucao_adotada": "a",
+      "evidencia_resolucao": "a",
+      "escalonamentos": [
+        {
+          "data": "2026-09-25T18:23",
+          "superior": "dias",
+          "prazo": "2026-09-30",
+          "motivo": "test",
+          "email_superior": "diassluizeduardo@gmail.com"
+        },
+        {
+          "data": "2026-09-25T18:24",
+          "superior": "a",
+          "prazo": "2026-09-30",
+          "motivo": "",
+          "email_superior": "a"
+        }
+      ],
+      "comunicacoes": []
+    },
+    {
+      "id": 2,
+      "projeto": "a",
+      "descricao": "a",
+      "classificacao": "Média-Simples",
+      "acao_corretiva": "aa",
+      "responsavel": "a",
+      "email_responsavel": "a",
+      "responsavel_qa": "aa",
+      "data_solicitacao": "2026-09-01",
+      "prazo": "2026-09-04",
+      "status": "Aberta",
+      "observacoes": "a",
+      "conclusao_em": "",
+      "forma_resolucao": "",
+      "solucao_adotada": "",
+      "evidencia_resolucao": "",
+      "escalonamentos": [],
+      "comunicacoes": []
+    },
+    {
+      "id": 3,
+      "projeto": "d",
+      "descricao": "d",
+      "classificacao": "Baixa-Severa",
+      "acao_corretiva": "d",
+      "responsavel": "d",
+      "email_responsavel": "d",
+      "responsavel_qa": "d",
+      "data_solicitacao": "2026-09-11",
+      "prazo": "2026-09-21",
+      "status": "Escalonada",
+      "observacoes": "d",
+      "conclusao_em": "",
+      "forma_resolucao": "",
+      "solucao_adotada": "",
+      "evidencia_resolucao": "",
+      "escalonamentos": [
+        {
+          "data": "2026-09-25T19:45",
+          "superior": "d",
+          "prazo": "2026-10-05",
+          "motivo": "Prazo de resoldução expirado.",
+          "email_superior": "d"
+        }
+      ],
+      "comunicacoes": []
+    }
+  ]
+}
