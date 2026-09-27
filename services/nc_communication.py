@@ -206,7 +206,7 @@ def _draw(sheet, nc):
     y = sheet.rows(
         y,
         DESC_COLUMNS,
-        [(nc.descricao, classificacao_label(nc.classificacao, uteis=False), nc.acao_corretiva)],
+        [(nc.descricao, classificacao_label(nc.classificacao), nc.acao_corretiva)],
         DESC_MIN_HEIGHT,
     )
 

@@ -2,12 +2,11 @@
 
 import tempfile
 import unittest
-from datetime import date, datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import tests  # noqa: F401  (starts the Qt application)
 from models.nc_model import (
-    CLASSIFICACAO_ADVERTENCIA,
     CLASSIFICACOES,
     FORMAS_RESOLUCAO,
     MAX_ESCALONAMENTOS,
@@ -23,47 +22,19 @@ from tests.helpers import make_nc
 
 
 class ClassificacaoTests(unittest.TestCase):
-    """R02/R03: severity table from 'Checklist de Processo e Produto'."""
+    def test_tabela_de_gravidade(self):
+        self.assertEqual(CLASSIFICACOES, {"Simples": 30, "Média": 45, "Complexa": 60})
 
-    def test_tabela_oficial_do_checklist(self):
-        esperado = {
-            "Baixa-Simples": 4, "Baixa-Complexa": 5, "Baixa-Severa": 6,
-            "Baixa-Extrema": 7, "Média-Simples": 3, "Média-Complexa": 4,
-            "Média-Severa": 5, "Média-Extrema": 6, "Alta-Simples": 2,
-            "Alta-Complexa": 3, "Alta-Severa": 4, "Alta-Extrema": 5,
-            "Urgente-Simples": 1, "Urgente-Complexa": 2,
-            "Urgente-Severa": 3, "Urgente-Extrema": 4,
-        }
-        for nome, dias in esperado.items():
-            self.assertEqual(CLASSIFICACOES[nome], dias, nome)
-        self.assertEqual(CLASSIFICACOES[CLASSIFICACAO_ADVERTENCIA], 0)
-
-    def test_rotulo_igual_ao_exemplo_de_comunicacao(self):
-        self.assertEqual(
-            classificacao_label("Média-Simples"), "Média-Simples | 3 dias úteis"
-        )
-        self.assertEqual(
-            classificacao_label("Urgente-Simples"), "Urgente-Simples | 1 dia útil"
-        )
-        self.assertEqual(
-            classificacao_label("Advertência"), "Advertência | Não se aplica"
-        )
-
-    def test_prazo_do_exemplo_de_comunicacao(self):
-        # Example: 1st request 16/03/2026, Média-Simples, deadline 19/03/2026.
-        self.assertEqual(
-            prazo_para("Média-Simples", date(2026, 3, 16)), date(2026, 3, 19)
-        )
-
-    def test_prazo_conta_apenas_dias_uteis(self):
-        # Thursday + 3 business days skips the weekend.
-        self.assertEqual(
-            prazo_para("Média-Simples", date(2025, 11, 20)), date(2025, 11, 25)
-        )
-        # Friday + 1 business day lands on Monday.
-        self.assertEqual(
-            prazo_para("Urgente-Simples", date(2025, 11, 21)), date(2025, 11, 24)
-        )
+    def test_rotulos_e_prazos(self):
+        inicio = datetime(2026, 3, 20, 23, 40)
+        for nome, minutos, rotulo in (
+            ("Simples", 30, "Simples | 30 minutos"),
+            ("Média", 45, "Média | 45 minutos"),
+            ("Complexa", 60, "Complexa | 1 hora"),
+        ):
+            with self.subTest(nome=nome):
+                self.assertEqual(classificacao_label(nome), rotulo)
+                self.assertEqual(prazo_para(nome, inicio), inicio + timedelta(minutes=minutos))
 
 
 class AcompanhamentoTests(unittest.TestCase):
@@ -74,24 +45,24 @@ class AcompanhamentoTests(unittest.TestCase):
         # Slides: which NC, who resolves, deadline, NC type, solution.
         self.assertTrue(nc.descricao)
         self.assertTrue(nc.responsavel)
-        self.assertEqual(nc.prazo, "2026-03-19")
-        self.assertEqual(nc.classificacao, "Média-Simples")
+        self.assertEqual(nc.prazo, "2026-03-16T09:45:00")
+        self.assertEqual(nc.classificacao, "Média")
         self.assertTrue(nc.acao_corretiva)
 
     def test_nc_vence_apos_prazo(self):
         nc = make_nc()
-        self.assertFalse(nc.vencida(date(2026, 3, 19)))
-        self.assertTrue(nc.vencida(date(2026, 3, 20)))
+        self.assertFalse(nc.vencida(datetime(2026, 3, 16, 9, 45)))
+        self.assertTrue(nc.vencida(datetime(2026, 3, 16, 9, 45, 1)))
 
     def test_nc_resolvida_nunca_vence(self):
         nc = make_nc()
         nc.resolver(FORMAS_RESOLUCAO[0], "Arquivos renomeados.", "Baseline 1.2")
-        self.assertFalse(nc.vencida(date(2030, 1, 1)))
+        self.assertFalse(nc.vencida(datetime(2030, 1, 1)))
 
     def test_advertencia_nao_tem_prazo_nem_vence(self):
         nc = make_nc(classificacao="Advertência", prazo="")
         self.assertEqual(nc.prazo_atual, "")
-        self.assertFalse(nc.vencida(date(2030, 1, 1)))
+        self.assertFalse(nc.vencida(datetime(2030, 1, 1)))
 
 
 class EscalonamentoTests(unittest.TestCase):
@@ -107,9 +78,9 @@ class EscalonamentoTests(unittest.TestCase):
         )
         self.assertEqual(nc.status, STATUS_ESCALONADA)
         self.assertEqual(nc.numero_escalonamento, 1)
-        # Média-Simples = 3 business days from Friday 20/03 -> Wed 25/03.
-        self.assertEqual(nc.prazo_atual, "2026-03-25")
-        self.assertEqual(nc.prazo, "2026-03-19")  # original is kept
+        # Média = 45 minutes from the escalation time.
+        self.assertEqual(nc.prazo_atual, "2026-03-20T09:45:00")
+        self.assertEqual(nc.prazo, "2026-03-16T09:45:00")  # original is kept
         self.assertEqual(nc.escalonamentos[0].superior, "Gerente de Projeto")
 
     def test_responsavel_nao_muda_apos_escalonar(self):
@@ -198,9 +169,9 @@ class PersistenciaTests(unittest.TestCase):
         antigo = {
             "id": 7,
             "descricao": "x",
-            "classificacao": "Média-Simples",
+            "classificacao": "Média",
             "escalonamentos": [
-                {"data": "2026-03-20T09:00", "superior": "GP", "prazo": "2026-03-25"}
+                {"data": "2026-03-20T09:00", "superior": "GP", "prazo": "2026-03-20T09:45:00"}
             ],
         }
         nc = NaoConformidade.from_dict(antigo)

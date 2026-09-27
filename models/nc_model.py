@@ -1,32 +1,16 @@
 import json
 from dataclasses import asdict, dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtGui import QColor
 
-# Classification (priority-complexity) -> business days to resolve the NC,
-# as defined in the course's "Checklist de Processo e Produto" example.
-# A warning ("Advertência") has no deadline and is never escalated.
+# Severity -> minutes to resolve the NC.
 CLASSIFICACAO_ADVERTENCIA = "Advertência"
 CLASSIFICACOES = {
-    CLASSIFICACAO_ADVERTENCIA: 0,
-    "Baixa-Simples": 4,
-    "Baixa-Complexa": 5,
-    "Baixa-Severa": 6,
-    "Baixa-Extrema": 7,
-    "Média-Simples": 3,
-    "Média-Complexa": 4,
-    "Média-Severa": 5,
-    "Média-Extrema": 6,
-    "Alta-Simples": 2,
-    "Alta-Complexa": 3,
-    "Alta-Severa": 4,
-    "Alta-Extrema": 5,
-    "Urgente-Simples": 1,
-    "Urgente-Complexa": 2,
-    "Urgente-Severa": 3,
-    "Urgente-Extrema": 4,
+    "Simples": 30,
+    "Média": 45,
+    "Complexa": 60,
 }
 
 # Escalation goes at most two levels up: responsible -> leader -> manager.
@@ -62,17 +46,12 @@ COR_RESOLVIDA = "#00ff59"
 COR_TEXTO_DESTACADO = "#111827"
 
 
-def classificacao_label(classificacao, uteis=True):
-    """Label like "Média-Simples | 3 dias úteis"; the PDF template omits "úteis"."""
-    days = CLASSIFICACOES.get(classificacao)
-    if days is None:
+def classificacao_label(classificacao):
+    minutos = CLASSIFICACOES.get(classificacao)
+    if minutos is None:
         return classificacao
-    if days == 0:
-        return f"{classificacao} | Não se aplica"
-    unit = "dia" if days == 1 else "dias"
-    if uteis:
-        unit += " útil" if days == 1 else " úteis"
-    return f"{classificacao} | {days} {unit}"
+    tempo = "1 hora" if minutos == 60 else f"{minutos} minutos"
+    return f"{classificacao} | {tempo}"
 
 
 def tem_prazo(classificacao):
@@ -80,19 +59,15 @@ def tem_prazo(classificacao):
 
 
 def prazo_para(classificacao, inicio):
-    """Deadline for a classification, counted in business days (Mon-Fri)."""
-    prazo = inicio
-    restantes = CLASSIFICACOES.get(classificacao, 0)
-    while restantes > 0:
-        prazo += timedelta(days=1)
-        if prazo.weekday() < 5:
-            restantes -= 1
-    return prazo
+    """Deadline counted in elapsed minutes from the request time."""
+    return inicio + timedelta(minutes=CLASSIFICACOES.get(classificacao, 0))
 
 
 def format_date(value):
     try:
-        return date.fromisoformat(value).strftime("%d/%m/%Y")
+        return datetime.fromisoformat(value).strftime(
+            "%d/%m/%Y %H:%M" if "T" in value else "%d/%m/%Y"
+        )
     except (TypeError, ValueError):
         return ""
 
@@ -152,8 +127,8 @@ class NaoConformidade:
     def vencida(self, hoje=None):
         if self.status == STATUS_RESOLVIDA or not self.prazo_atual:
             return False
-        hoje = hoje or date.today()
-        return date.fromisoformat(self.prazo_atual) < hoje
+        hoje = hoje or datetime.now()
+        return datetime.fromisoformat(self.prazo_atual) < hoje
 
     @property
     def limite_escalonamento_atingido(self):
@@ -174,7 +149,7 @@ class NaoConformidade:
 
     def novo_prazo_escalonamento(self, hoje=None):
         """New deadline reuses the original resolution time, from today."""
-        return prazo_para(self.classificacao, hoje or date.today())
+        return prazo_para(self.classificacao, hoje or datetime.now())
 
     def escalonar(self, superior, motivo="", email_superior="", quando=None):
         bloqueio = self.motivo_bloqueio_escalonamento()
@@ -188,7 +163,7 @@ class NaoConformidade:
             Escalonamento(
                 data=quando.isoformat(timespec="minutes"),
                 superior=superior.strip(),
-                prazo=self.novo_prazo_escalonamento(quando.date()).isoformat(),
+                prazo=self.novo_prazo_escalonamento(quando).isoformat(),
                 motivo=motivo,
                 email_superior=email_superior.strip(),
             )

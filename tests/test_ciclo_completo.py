@@ -2,7 +2,7 @@
 
 import tempfile
 import unittest
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
@@ -44,7 +44,7 @@ class CoresTests(unittest.TestCase):
         self.model = NcTableModel()
 
     def test_vencida_em_vermelho(self):
-        self.model.add(make_nc())  # deadline 19/03/2026, already past
+        self.model.add(make_nc())  # already overdue
         self.assertEqual(_row_color(self.model), COR_VENCIDA)
         self.assertEqual(COR_VENCIDA, "#ff0000")
 
@@ -69,7 +69,7 @@ class CoresTests(unittest.TestCase):
         self.assertEqual(_row_color(self.model), COR_VENCIDA)
 
     def test_nc_no_prazo_fica_sem_cor(self):
-        hoje = date.today().isoformat()
+        hoje = datetime.now().isoformat()
         self.model.add(make_nc(data_solicitacao=hoje))
         self.assertIsNone(_row_color(self.model))
 
@@ -108,7 +108,7 @@ class CicloCompletoTests(unittest.TestCase):
         self.assertEqual(len(list(email.iter_attachments())), 1)
 
         # 2. deadline expires
-        self.assertTrue(nc.vencida(date(2026, 3, 20)))
+        self.assertTrue(nc.vencida(datetime(2026, 3, 20)))
 
         # 3. first escalation: responsible + leader, original NC attached
         nc.escalonar(
@@ -123,14 +123,14 @@ class CicloCompletoTests(unittest.TestCase):
         )
 
         # 4. new deadline also expires: second (and last) level
-        self.assertTrue(nc.vencida(date(2026, 3, 26)))
+        self.assertTrue(nc.vencida(datetime(2026, 3, 26)))
         nc.escalonar(
             "Mauricio F.", "Sem retorno.", "mauricio@example.com",
             quando=datetime(2026, 3, 26, 9, 0),
         )
         email = self._comunicar(nc, "nc_esc2.pdf")
         self.assertEqual(email["To"], "luis@example.com, mauricio@example.com")
-        self.assertEqual(nc.prazo_atual, "2026-03-31")
+        self.assertEqual(nc.prazo_atual, "2026-03-26T09:45:00")
         self.assertEqual(nc.responsavel, "Luis S")
         with self.assertRaises(ValueError):
             nc.escalonar("Diretor")
@@ -142,7 +142,7 @@ class CicloCompletoTests(unittest.TestCase):
         )
         email = self._comunicar(nc, "nc_resolvida.pdf")
         self.assertIn("NC resolvida", email["Subject"])
-        self.assertFalse(nc.vencida(date(2030, 1, 1)))
+        self.assertFalse(nc.vencida(datetime(2030, 1, 1)))
 
         # 6. everything survives saving and reopening
         save_json(self.dir / "ncs.json", [nc])
@@ -163,12 +163,12 @@ class CasosDeBordaTests(unittest.TestCase):
         dialog.observacoes.setPlainText("Atualizado.")
         dialog._accept()
         self.assertEqual(nc.status, STATUS_ESCALONADA)
-        self.assertEqual(nc.prazo_atual, "2026-03-25")
+        self.assertEqual(nc.prazo_atual, "2026-03-20T09:45:00")
         self.assertEqual(nc.observacoes, "Atualizado.")
 
     def test_status_em_andamento_continua_vencendo(self):
         nc = make_nc(status=STATUS_EM_ANDAMENTO)
-        self.assertTrue(nc.vencida(date(2026, 3, 20)))
+        self.assertTrue(nc.vencida(datetime(2026, 3, 20)))
 
     def test_id_nao_repete_depois_de_excluir(self):
         model = NcTableModel()
@@ -185,10 +185,11 @@ class CasosDeBordaTests(unittest.TestCase):
     def test_nc_sem_email_nao_tem_destinatario(self):
         self.assertEqual(make_nc(email_responsavel="").destinatarios(), [])
 
-    def test_prazo_no_dia_ainda_nao_venceu(self):
-        nc = make_nc(data_solicitacao=(date.today() - timedelta(days=30)).isoformat())
-        nc.prazo = date.today().isoformat()
-        self.assertFalse(nc.vencida())
+    def test_prazo_no_instante_exato_ainda_nao_venceu(self):
+        nc = make_nc(data_solicitacao=(datetime.now() - timedelta(days=30)).isoformat())
+        agora = datetime.now()
+        nc.prazo = agora.isoformat()
+        self.assertFalse(nc.vencida(agora))
 
     def test_aba_bloqueia_escalonar_advertencia(self):
         tab = NcTab()

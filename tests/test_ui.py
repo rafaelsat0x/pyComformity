@@ -1,7 +1,7 @@
 """UI flows of the NC tab, driven without showing windows."""
 
 import unittest
-from datetime import date
+from datetime import datetime
 from unittest import mock
 
 import tests  # noqa: F401  (starts the Qt application)
@@ -16,7 +16,7 @@ from models.nc_model import (
 )
 from tests.helpers import make_nc
 from ui import nc_tab
-from ui.nc_tab import EscalonarDialog, NcDialog, NcTab, ResolverDialog, _to_qdate
+from ui.nc_tab import EscalonarDialog, NcDialog, NcTab, ResolverDialog
 
 NO = QMessageBox.StandardButton.No
 YES = QMessageBox.StandardButton.Yes
@@ -30,34 +30,27 @@ class NcDialogTests(unittest.TestCase):
         dialog.descricao.setPlainText("Checklist sem responsável.")
         dialog.responsavel.setText("Luis S")
         dialog.classificacao.setCurrentIndex(
-            dialog.classificacao.findData("Alta-Complexa")
+            dialog.classificacao.findData("Complexa")
         )
         dialog._accept()
 
         self.assertEqual(dialog.result(), QDialog.DialogCode.Accepted)
-        esperado = prazo_para("Alta-Complexa", date.today()).isoformat()
+        esperado = prazo_para("Complexa", datetime.fromisoformat(nc.data_solicitacao)).isoformat()
         self.assertEqual(nc.prazo, esperado)
-        self.assertEqual(nc.data_solicitacao, date.today().isoformat())
+        self.assertEqual(nc.data_solicitacao, dialog.data_solicitacao.dateTime().toPython().isoformat())
 
-    def test_advertencia_fica_sem_prazo(self):
-        nc = NaoConformidade(id=1)
-        dialog = NcDialog(nc)
-        dialog.projeto.setText("P")
-        dialog.descricao.setPlainText("d")
-        dialog.responsavel.setText("r")
-        dialog.classificacao.setCurrentIndex(
-            dialog.classificacao.findData("Advertência")
+    def test_dropdown_usa_apenas_as_tres_gravidades(self):
+        dialog = NcDialog(NaoConformidade(id=1))
+        self.assertEqual(
+            [dialog.classificacao.itemText(i) for i in range(dialog.classificacao.count())],
+            ["Simples | 30 minutos", "Média | 45 minutos", "Complexa | 1 hora"],
         )
-        self.assertEqual(dialog.prazo.text(), "Não se aplica")
-        dialog._accept()
-        self.assertEqual(nc.prazo, "")
 
     def test_data_da_solicitacao_nao_pode_ser_futura(self):
-        nc = NaoConformidade(id=1)
-        dialog = NcDialog(nc)
-        self.assertEqual(dialog.data_solicitacao.maximumDate(), _to_qdate(date.today()))
-        dialog.data_solicitacao.setDate(_to_qdate(date(date.today().year + 1, 1, 1)))
-        self.assertEqual(dialog.data_solicitacao.date(), _to_qdate(date.today()))
+        dialog = NcDialog(NaoConformidade(id=1))
+        limite = dialog.data_solicitacao.maximumDateTime()
+        dialog.data_solicitacao.setDateTime(limite.addDays(1))
+        self.assertEqual(dialog.data_solicitacao.dateTime(), limite)
 
     def test_campos_obrigatorios(self):
         nc = NaoConformidade(id=1)
@@ -74,7 +67,7 @@ class TabFlowTests(unittest.TestCase):
 
     def setUp(self):
         self.tab = NcTab()
-        self.nc = make_nc()  # deadline 19/03/2026, already overdue
+        self.nc = make_nc()  # already overdue
         self.tab.model.add(self.nc)
         self.tab._after_change(0)
         self.tab.table.selectRow(0)

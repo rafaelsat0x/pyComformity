@@ -49,14 +49,14 @@ class TemplateTests(unittest.TestCase):
             "Data da 1a Solicitação:",
             "16/03/2026",
             "Prazo de Resolução:",
-            "19/03/2026",
+            "16/03/2026 09:45",
             "Nº de Escalonamento:",
             "Responsável por QA:",
             "Vinicius",
             "Descrição",
             "Classificação",
             "Ação Corretiva Indicada",
-            "Média-Simples | 3 dias",
+            "Média | 45 minutos",
             "Histórico de Escalonamento",
             "Superior Responsável",
             "Prazo para Resolução",
@@ -78,7 +78,7 @@ class TemplateTests(unittest.TestCase):
         texto, _pages, _size = _pdf_text(nc)
         self.assertIn("1º nível", texto)
         self.assertIn("Gerente de Projeto", texto)
-        self.assertIn("25/03/2026", texto)
+        self.assertIn("20/03/2026 09:45", texto)
         self.assertNotIn("Nenhum", texto)
 
     def test_nc_original_nao_tem_escalonamentos(self):
@@ -91,7 +91,7 @@ class TemplateTests(unittest.TestCase):
             texto = document.getAllText(0).text()
             document.close()
         self.assertIn("Nenhum", texto)
-        self.assertIn("19/03/2026", texto)
+        self.assertIn("16/03/2026 09:45", texto)
         self.assertNotIn("Gerente de Projeto", texto)
 
 

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 
 from models.nc_model import NaoConformidade, prazo_para
 
@@ -13,7 +13,7 @@ def make_nc(**overrides):
             "arquivos conforme estabelecido nas Regras de Gerência de "
             "Configuração?"
         ),
-        "classificacao": "Média-Simples",
+        "classificacao": "Média",
         "acao_corretiva": (
             "Corrigir nomenclatura dos Itens de Configuração conforme "
             "estabelecido nas Regras de Gerência de Configuração."
@@ -21,7 +21,7 @@ def make_nc(**overrides):
         "responsavel": "Luis S",
         "email_responsavel": "luis@example.com",
         "responsavel_qa": "Vinicius",
-        "data_solicitacao": "2026-03-16",
+        "data_solicitacao": "2026-03-16T09:00:00",
         "observacoes": (
             "O relatório de não conformidade de testes deve seguir as regras "
             "de gerência de configuração."
@@ -31,6 +31,6 @@ def make_nc(**overrides):
     nc = NaoConformidade(**data)
     if "prazo" not in overrides:
         nc.prazo = prazo_para(
-            nc.classificacao, date.fromisoformat(nc.data_solicitacao)
+            nc.classificacao, datetime.fromisoformat(nc.data_solicitacao)
         ).isoformat()
     return nc

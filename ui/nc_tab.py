@@ -1,12 +1,12 @@
-from datetime import date
+from datetime import datetime
 from smtplib import SMTPAuthenticationError
 
-from PySide6.QtCore import QDate, Qt
+from PySide6.QtCore import QDateTime, Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QComboBox,
-    QDateEdit,
+    QDateTimeEdit,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -64,18 +64,10 @@ from services.nc_communication import (
 )
 
 
-def _to_qdate(value):
-    return QDate(value.year, value.month, value.day)
-
-
-def _from_qdate(value):
-    return date(value.year(), value.month(), value.day())
-
-
 def _date_edit(value):
-    editor = QDateEdit(_to_qdate(value))
+    editor = QDateTimeEdit(QDateTime(value))
     editor.setCalendarPopup(True)
-    editor.setDisplayFormat("dd/MM/yyyy")
+    editor.setDisplayFormat("dd/MM/yyyy HH:mm")
     return editor
 
 
@@ -96,9 +88,9 @@ class NcDialog(QDialog):
         self.setMinimumWidth(520)
 
         solicitacao = (
-            date.fromisoformat(nc.data_solicitacao)
+            datetime.fromisoformat(nc.data_solicitacao)
             if nc.data_solicitacao
-            else date.today()
+            else datetime.now().replace(second=0, microsecond=0)
         )
 
         self.projeto = QLineEdit(nc.projeto)
@@ -117,7 +109,7 @@ class NcDialog(QDialog):
         self.responsavel_qa = QLineEdit(nc.responsavel_qa)
         self.data_solicitacao = _date_edit(solicitacao)
         # A request can't be dated in the future, or it would never be overdue.
-        self.data_solicitacao.setMaximumDate(_to_qdate(max(solicitacao, date.today())))
+        self.data_solicitacao.setMaximumDateTime(QDateTime(max(solicitacao, datetime.now())))
         self.prazo = QLabel()
         self.status = QComboBox()
         self.status.addItems([STATUS_ABERTA, STATUS_EM_ANDAMENTO])
@@ -130,7 +122,7 @@ class NcDialog(QDialog):
         self.status.setCurrentText(nc.status)
 
         self.classificacao.currentIndexChanged.connect(self._update_prazo)
-        self.data_solicitacao.dateChanged.connect(self._update_prazo)
+        self.data_solicitacao.dateTimeChanged.connect(self._update_prazo)
         self._update_prazo()
 
         form = QFormLayout()
@@ -141,7 +133,7 @@ class NcDialog(QDialog):
         form.addRow("Responsável pela resolução*", self.responsavel)
         form.addRow("E-mail do responsável", self.email_responsavel)
         form.addRow("Responsável por QA", self.responsavel_qa)
-        form.addRow("Data da 1ª solicitação", self.data_solicitacao)
+        form.addRow("Data e hora da 1ª solicitação", self.data_solicitacao)
         form.addRow("Prazo de resolução", self.prazo)
         form.addRow("Status", self.status)
         form.addRow("Observações", self.observacoes)
@@ -177,13 +169,13 @@ class NcDialog(QDialog):
         classificacao = self.classificacao.currentData()
         if not tem_prazo(classificacao):
             return None
-        inicio = _from_qdate(self.data_solicitacao.date())
+        inicio = self.data_solicitacao.dateTime().toPython()
         return prazo_para(classificacao, inicio)
 
     def _update_prazo(self):
         prazo = self._prazo()
         self.prazo.setText(
-            prazo.strftime("%d/%m/%Y") + " (dias úteis)" if prazo else "Não se aplica"
+            format_date(prazo.isoformat()) if prazo else "Não se aplica"
         )
 
     def _accept(self):
@@ -204,7 +196,7 @@ class NcDialog(QDialog):
             )
             return
 
-        if _from_qdate(self.data_solicitacao.date()) > date.today():
+        if self.data_solicitacao.dateTime().toPython() > datetime.now():
             QMessageBox.warning(
                 self,
                 "Data inválida",
@@ -220,9 +212,7 @@ class NcDialog(QDialog):
         nc.responsavel = self.responsavel.text().strip()
         nc.email_responsavel = self.email_responsavel.text().strip()
         nc.responsavel_qa = self.responsavel_qa.text().strip()
-        nc.data_solicitacao = _from_qdate(
-            self.data_solicitacao.date()
-        ).isoformat()
+        nc.data_solicitacao = self.data_solicitacao.dateTime().toPython().isoformat()
         prazo = self._prazo()
         nc.prazo = prazo.isoformat() if prazo else ""
         nc.status = self.status.currentText()
@@ -554,7 +544,7 @@ class NcTab(QWidget):
         self._update_summary()
 
     def _set_initial_column_widths(self):
-        widths = (50, 160, 330, 200, 160, 110, 110, 130, 150, 130)
+        widths = (50, 160, 330, 200, 160, 155, 155, 130, 150, 130)
         for column, width in enumerate(widths):
             self.table.setColumnWidth(column, width)
 
