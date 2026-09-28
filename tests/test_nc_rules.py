@@ -13,6 +13,7 @@ from models.nc_model import (
     STATUS_ESCALONADA,
     STATUS_RESOLVIDA,
     NaoConformidade,
+    NcTableModel,
     classificacao_label,
     load_json,
     prazo_para,
@@ -53,6 +54,19 @@ class AcompanhamentoTests(unittest.TestCase):
         nc = make_nc()
         self.assertFalse(nc.vencida(datetime(2026, 3, 16, 9, 45)))
         self.assertTrue(nc.vencida(datetime(2026, 3, 16, 9, 45, 1)))
+
+    def test_tabela_exibe_horario_em_todos_os_formatos_de_prazo(self):
+        model = NcTableModel()
+        coluna = next(i for i, (key, _) in enumerate(model.COLUMNS) if key == "prazo_atual")
+        for prazo, esperado in (
+            ("2026-03-16T09:45:00", "16/03/2026 09:45"),
+            ("2026-03-16 09:45:00", "16/03/2026 09:45"),
+            ("2026-03-16", "16/03/2026 00:00"),
+            ("", ""),
+        ):
+            with self.subTest(prazo=prazo):
+                model.set_items([make_nc(prazo=prazo)])
+                self.assertEqual(model.data(model.index(0, coluna)), esperado)
 
     def test_nc_resolvida_nunca_vence(self):
         nc = make_nc()
@@ -110,6 +124,12 @@ class EscalonamentoTests(unittest.TestCase):
     def test_superior_obrigatorio(self):
         with self.assertRaises(ValueError):
             make_nc().escalonar("   ")
+
+    def test_classificacao_antiga_pede_atualizacao_antes_de_escalonar(self):
+        nc = make_nc(classificacao="Média-Simples", prazo="2026-03-19")
+        with self.assertRaisesRegex(ValueError, "classificação válida"):
+            nc.escalonar("Gerente")
+        self.assertEqual(nc.escalonamentos, [])
 
     def test_destinatarios_incluem_superior_apos_escalonar(self):
         nc = make_nc()

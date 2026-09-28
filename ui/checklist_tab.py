@@ -2,7 +2,6 @@ from PySide6.QtCore import QDate, QDateTime, Qt, QTime
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
-    QDateEdit,
     QDateTimeEdit,
     QHBoxLayout,
     QLabel,
@@ -15,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from models.checklist_model import ChecklistModel
+from models.nc_model import CLASSIFICACOES
 
 
 class ChoiceDelegate(QStyledItemDelegate):
@@ -35,38 +35,6 @@ class ChoiceDelegate(QStyledItemDelegate):
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.currentText(), Qt.ItemDataRole.EditRole)
-
-
-class DateDelegate(QStyledItemDelegate):
-    """Calendar editor that displays local dates but stores ISO dates."""
-
-    _EMPTY_DATE = QDate(1900, 1, 1)
-
-    def createEditor(self, parent, option, index):
-        editor = QDateEdit(parent)
-        editor.setCalendarPopup(True)
-        editor.setDisplayFormat("dd/MM/yyyy")
-        editor.setMinimumDate(self._EMPTY_DATE)
-        editor.setSpecialValueText("")
-        return editor
-
-    def displayText(self, value, locale):
-        date = QDate.fromString(str(value or ""), Qt.DateFormat.ISODate)
-        return date.toString("dd/MM/yyyy") if date.isValid() else ""
-
-    def setEditorData(self, editor, index):
-        value = str(index.data(Qt.ItemDataRole.EditRole) or "")
-        date = QDate.fromString(value, Qt.DateFormat.ISODate)
-        editor.setDate(date if date.isValid() else self._EMPTY_DATE)
-
-    def setModelData(self, editor, model, index):
-        date = editor.date()
-        value = (
-            ""
-            if date == self._EMPTY_DATE
-            else date.toString(Qt.DateFormat.ISODate)
-        )
-        model.setData(index, value, Qt.ItemDataRole.EditRole)
 
 
 class DateTimeDelegate(QStyledItemDelegate):
@@ -149,7 +117,7 @@ class ChecklistTab(QWidget):
         self.table.setItemDelegateForColumn(
             5,
             ChoiceDelegate(
-                ["", "Baixa", "Média", "Alta", "Crítica"],
+                ["", *CLASSIFICACOES],
                 self.table,
             ),
         )
@@ -161,12 +129,8 @@ class ChecklistTab(QWidget):
             ),
         )
 
-        date_delegate = DateDelegate(self.table)
-        for column in (6, 7):
-            self.table.setItemDelegateForColumn(column, date_delegate)
-
         date_time_delegate = DateTimeDelegate(self.table)
-        for column in (3, 8, 9):
+        for column in (3, 6, 7, 8, 9):
             self.table.setItemDelegateForColumn(column, date_time_delegate)
 
         self._set_initial_column_widths()
@@ -192,7 +156,7 @@ class ChecklistTab(QWidget):
         self._add_item()
 
     def _set_initial_column_widths(self):
-        widths = (60, 280, 150, 220, 220, 160, 190, 240, 210, 220, 170)
+        widths = (60, 280, 150, 220, 220, 160, 230, 280, 210, 220, 170)
         for column, width in enumerate(widths):
             self.table.setColumnWidth(column, width)
 

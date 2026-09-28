@@ -64,12 +64,9 @@ def prazo_para(classificacao, inicio):
 
 
 def format_date(value):
-    try:
-        return datetime.fromisoformat(value).strftime(
-            "%d/%m/%Y %H:%M" if "T" in value else "%d/%m/%Y"
-        )
-    except (TypeError, ValueError):
-        return ""
+    # Legacy date-only values already count as midnight when checking deadlines.
+    # Show that time consistently in the table, dialogs and communications.
+    return format_datetime(value)
 
 
 def format_datetime(value):
@@ -138,8 +135,10 @@ class NaoConformidade:
         """Why this NC can't be escalated, or "" when it can."""
         if self.status == STATUS_RESOLVIDA:
             return "Essa NC já está resolvida."
-        if not tem_prazo(self.classificacao):
+        if self.classificacao == CLASSIFICACAO_ADVERTENCIA:
             return "Advertências não têm prazo e não são escalonadas."
+        if self.classificacao not in CLASSIFICACOES:
+            return "Edite a NC e selecione uma classificação válida antes de escalonar."
         if self.limite_escalonamento_atingido:
             return (
                 f"Essa NC já foi escalonada {MAX_ESCALONAMENTOS} vezes, "

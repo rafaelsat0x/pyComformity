@@ -5,6 +5,7 @@ from datetime import datetime
 from unittest import mock
 
 import tests  # noqa: F401  (starts the Qt application)
+from PySide6.QtCore import QDateTime
 from PySide6.QtWidgets import QDialog, QMessageBox
 
 from models.nc_model import (
@@ -45,6 +46,45 @@ class NcDialogTests(unittest.TestCase):
             [dialog.classificacao.itemText(i) for i in range(dialog.classificacao.count())],
             ["Simples | 30 minutos", "Média | 45 minutos", "Complexa | 1 hora"],
         )
+
+    def test_previsao_preserva_horario_ao_salvar_e_reabrir(self):
+        nc = make_nc()
+        dialog = NcDialog(nc)
+        dialog.data_solicitacao.setDateTime(QDateTime(datetime(2026, 3, 16, 23, 40)))
+        for classificacao, prazo in (
+            ("Simples", "2026-03-17T00:10:00"),
+            ("Média", "2026-03-17T00:25:00"),
+            ("Complexa", "2026-03-17T00:40:00"),
+        ):
+            with self.subTest(classificacao=classificacao):
+                dialog.classificacao.setCurrentIndex(
+                    dialog.classificacao.findData(classificacao)
+                )
+                esperado = datetime.fromisoformat(prazo).strftime("%d/%m/%Y %H:%M")
+                self.assertEqual(dialog.prazo.text(), esperado)
+                dialog._accept()
+                self.assertEqual(nc.prazo, prazo)
+                self.assertEqual(nc.classificacao, classificacao)
+                reaberto = NcDialog(nc)
+                self.assertEqual(reaberto.prazo.text(), esperado)
+
+    def test_classificacao_antiga_exige_escolha_sem_trocar_silenciosamente(self):
+        nc = make_nc(classificacao="Média-Simples", prazo="2026-03-19")
+        original = nc.to_dict()
+        dialog = NcDialog(nc)
+        self.assertEqual(dialog.classificacao.count(), 3)
+        self.assertEqual(dialog.classificacao.currentIndex(), -1)
+        self.assertIn("Média-Simples", dialog.classificacao.placeholderText())
+        with mock.patch.object(nc_tab.QMessageBox, "warning") as warning:
+            dialog._accept()
+        self.assertIn("Classificação", warning.call_args.args[2])
+        self.assertEqual(nc.to_dict(), original)
+
+        dialog.classificacao.setCurrentIndex(dialog.classificacao.findData("Média"))
+        dialog._accept()
+        self.assertEqual(dialog.result(), QDialog.DialogCode.Accepted)
+        self.assertEqual(nc.classificacao, "Média")
+        self.assertEqual(nc.prazo, "2026-03-16T09:45:00")
 
     def test_data_da_solicitacao_nao_pode_ser_futura(self):
         dialog = NcDialog(NaoConformidade(id=1))

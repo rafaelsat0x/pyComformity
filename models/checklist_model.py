@@ -15,10 +15,10 @@ class ChecklistModel(QAbstractTableModel):
         ),
         ("responsaveis", "Responsáveis pela resolução"),
         ("classificacao_nc", "Classificação da NC"),
-        ("previsao_resolucao", "Data prevista para resolução"),
+        ("previsao_resolucao", "Data e hora previstas para resolução"),
         (
             "nova_data_resolucao",
-            "Nova data para resolução (NC escalonada)",
+            "Nova data e hora para resolução (NC escalonada)",
         ),
         ("escalonamento_em", "Data e hora do escalonamento"),
         ("conclusao_em", "Data e hora da conclusão da NC"),

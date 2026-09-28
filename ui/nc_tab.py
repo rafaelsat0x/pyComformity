@@ -102,6 +102,11 @@ class NcDialog(QDialog):
             self.classificacao.setCurrentIndex(
                 list(CLASSIFICACOES).index(nc.classificacao)
             )
+        elif nc.classificacao:
+            self.classificacao.setPlaceholderText(
+                f"Selecione (classificação anterior: {nc.classificacao})"
+            )
+            self.classificacao.setCurrentIndex(-1)
         self.acao_corretiva = _text_edit(nc.acao_corretiva)
         self.responsavel = QLineEdit(nc.responsavel)
         self.email_responsavel = QLineEdit(nc.email_responsavel)
@@ -134,7 +139,7 @@ class NcDialog(QDialog):
         form.addRow("E-mail do responsável", self.email_responsavel)
         form.addRow("Responsável por QA", self.responsavel_qa)
         form.addRow("Data e hora da 1ª solicitação", self.data_solicitacao)
-        form.addRow("Prazo de resolução", self.prazo)
+        form.addRow("Previsão de conclusão (data e hora)", self.prazo)
         form.addRow("Status", self.status)
         form.addRow("Observações", self.observacoes)
         if nc.escalonamentos:
@@ -175,7 +180,7 @@ class NcDialog(QDialog):
     def _update_prazo(self):
         prazo = self._prazo()
         self.prazo.setText(
-            format_date(prazo.isoformat()) if prazo else "Não se aplica"
+            format_datetime(prazo.isoformat()) if prazo else "Selecione a classificação"
         )
 
     def _accept(self):
@@ -184,6 +189,7 @@ class NcDialog(QDialog):
             for nome, valor in (
                 ("Projeto", self.projeto.text()),
                 ("Descrição", self.descricao.toPlainText()),
+                ("Classificação", self.classificacao.currentData() or ""),
                 ("Responsável pela resolução", self.responsavel.text()),
             )
             if not valor.strip()
